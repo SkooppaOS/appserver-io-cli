@@ -55,9 +55,9 @@ class AboutCommand extends Command
  <error>Appserver Initializer (%s)</error>
  %s
 
- This is the official appserver initializer script.
+ This is the official appserverio cli application.
 
- It will help you start new projects based on the appserver.io PHP application server stack.
+ It will help you start new projects and simplify common tasks you would often do on the appserver.io PHP application server stack.
 
  EXAMPLE 1: To create a new project and directory called <info>blog</info>, use the following command:
 
@@ -75,7 +75,7 @@ class AboutCommand extends Command
 
  All projects will be created under the <info>/webapps</info> directory.
 
- TIP: You can also use "-w" as a shortcut.
+ TIP: You can also use "-w" as a shortcut for "--with".
 
  You will also be asked further questions to setup your website. After answering them, you should be ready to go to work!
 

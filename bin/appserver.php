@@ -23,10 +23,10 @@ if (!isset($_SERVER['PATH']) && isset($_SERVER['Path'])) {
 $app = new Application('Appserver CLI', $appVersion);
 $app->add(new AboutCommand($appVersion));
 $app->add(new NewCommand());
-$application->add(new ServerConfig());
-$application->add(new ServerCommand());
-$application->add(new ServerParameterCommand());
-$application->add(new ServerRestartCommand());
-$application->add(new ServletCommand());
+$app->add(new ServerConfig());
+$app->add(new ServerCommand());
+$app->add(new ServerParameterCommand());
+$app->add(new ServerRestartCommand());
+$app->add(new ServletCommand());
 $app->setDefaultCommand('help');
 $app->run();

@@ -2,7 +2,7 @@
 
 namespace AppserverIo\Cli\Commands;
 
-use AppserverIo\Cli\BackupTrait;
+use AppserverIo\Cli\ClassTraits\BackupTrait;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputDefinition;
 use Symfony\Component\Console\Input\InputInterface;
