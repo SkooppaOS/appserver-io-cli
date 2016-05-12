@@ -1,0 +1,50 @@
+{
+  "name" : "SkooppaOS/appserver-io-cli",
+  "description" : "CLI app for starting new projects and more.",
+  "homepage" : "https://github.com/SkooppaOS/appserver-io-cli",
+  "license" : "OSL-3.0",
+  "minimum-stability": "dev",
+  "require" : {
+    "php" : ">=5.6.0",
+    "symfony/console": "~2.5|~3.0",
+    "symfony/process": "~2.1|~3.0.0"
+  },
+  "autoload" : {
+    "psr-0" : {
+      "AppserverIo\\Cli" : [
+        "src/",
+        "tests/"
+      ]
+    }
+  },
+  "authors" : [
+    {
+      "name" : "Scott Molinari",
+      "email" : "scott.molinari@adduco.de",
+      "homepage" : "http://www.adduco.de",
+      "role" : "Developer"
+    },
+    {
+      "name": "Martin Mohr",
+      "email": "mohrwurm@gmail.com"
+    }
+  ],
+  "config" : {
+    "github-oauth" : {
+      "github.com" : "604a3b5943228e434a5b52c2ba3cf72286d30db9"
+    }
+  },
+  "bin": [
+    "bin/appserver",
+    "bin/appserver.php"
+  ],
+  "support" : {
+    "email" : "t.wagner@techdivision.com",
+    "issues" : "https://github.com/appserver-io/cli/issues",
+    "source" : "https://github.com/appserver-io/cli"
+  },
+  "keywords" : [
+    "appserver command line interface utility"
+  ]
+}
+
