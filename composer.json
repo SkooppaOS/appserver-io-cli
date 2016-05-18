@@ -1,7 +1,7 @@
 {
-  "name" : "SkooppaOS/appserver-io-cli",
+  "name" : "skooppaos/appserver-io-cli",
   "description" : "CLI app for starting new projects and more.",
-  "homepage" : "https://github.com/SkooppaOS/appserver-io-cli",
+  "homepage" : "https://github.com/skooppaos/appserver-io-cli",
   "license" : "OSL-3.0",
   "minimum-stability": "dev",
   "require" : {
