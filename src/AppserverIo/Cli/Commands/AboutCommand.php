@@ -45,40 +45,61 @@ class AboutCommand extends Command
     {
         $this
             ->setName('about')
-            ->setDescription('Appserver Initializer Help.');
+            ->setDescription('Appserver CLI Help.');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $commandHelp = <<<COMMAND_HELP
 
- <error>Appserver Initializer (%s)</error>
+ <error>Appserver CLI (%s)</error>
  %s
 
  This is the official appserverio cli application.
 
- It will help you start new projects and simplify common tasks you would often do on the appserver.io PHP application server stack.
+ It will help you simplify common tasks, which you will often do with the appserver.io PHP application server stack.
+ 
+ <info>COMMAND</info> about: Shows this help information. 
+  
+       It is the default. If you only type <info>appserver</info> you will also see this information.
 
- EXAMPLE 1: To create a new project and directory called <info>blog</info>, use the following command:
+ <info>COMMAND</info> new: To create a new project and directory. 
+ 
+       EXAMPLE:
 
-   <comment>%s new blog</comment>
+       <comment>appserver new blog</comment>
+ 
+       This command will create a bare-bones project with a skeleton structure for you.
+   
+       If you don't add a project name, you will be prompted to add one. 
+ 
+       NOTE: All projects will be created under the <info>/webapps</info> directory.
+       You will also be asked further questions to setup your project and website. 
+       After answering them, you should be ready to go to work!
 
- This command will only create the barebones project directory structure for you.
+       <info>OPTIONS</info> --with (-w) : Creates the project, but with the requested appserver packages.
+ 
+          EXAMPLE: 
 
- EXAMPLE 2: To create the same project, but based on the <info>RoutLt</info> package:
+          <comment>appserver new blog --with routlt</comment>
 
-   <comment>%3\$s new blog --with routlt</comment>
+          The above command creates the same blog project, but based on the <info>RoutLt</info> package.
+          Current packages available: 
+   
+              "routlt" -  contains only routlt and minimum example files with directory structure
+              "example" - full example project with routlt and diverse examples like a small app, data import and login.
+       
+ <info>COMMAND</info> "remove" : Removes any application that had been created.
+ 
+       EXAMPLE: 
+ 
+       <comment>appserver remove blog</comment> 
 
- EXAMPLE 3: To create a project with the basic example application (including Routlt):
-
-   <comment>%3\$s new blog --with examples</comment>
-
- All projects will be created under the <info>/webapps</info> directory.
-
- TIP: You can also use "-w" as a shortcut for "--with".
-
- You will also be asked further questions to setup your website. After answering them, you should be ready to go to work!
-
+ <info>COMMAND</info> "restart" : Restarts the appserver deamon. This is often necessary, when you make changes to your application, to see the changes made.
+     
+       EXAMPLE:
+     
+       <comment>appserver restart</comment>
 COMMAND_HELP;
 
         $output->writeln(sprintf($commandHelp,

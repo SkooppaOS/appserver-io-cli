@@ -1,12 +1,16 @@
 <?php
 namespace AppserverIo\Cli\Commands;
 
+use AppserverIo\Cli\ClassTraits\ProjectTrait;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Question\Question;
+use Symfony\Component\Process\Process;
 use Symfony\Component\Filesystem\Exception\IOException;
+use Symfony\Component\Console\Helper\QuestionHelper;
 use League\Flysystem\Filesystem;
 use League\Flysystem\Adapter\Local as Adapter;
 use AppserverIo\Cli\Exception\AbortException;
@@ -21,6 +25,8 @@ use Templates;
 class NewCommand extends Command
 {
 
+    use ProjectTrait;
+
     const ROOT_DIR = '/opt/appserver/webapps';
 
     /**
@@ -31,7 +37,12 @@ class NewCommand extends Command
     /**
      * @var string
      */
-    protected $projectDir;
+    protected $projectDir = '';
+
+    /**
+     * @var string
+     */
+    protected $projectDirName = '';
 
     /**
      * @var InputInterface
@@ -58,15 +69,19 @@ class NewCommand extends Command
      */
     protected $packages = '';
 
+    /**
+     * @var GitRepo
+     */
+    protected $gitRepo;
+
 
     protected function configure()
     {
         $this
             ->setName('new')
             ->setDescription('Creates a new appserver project.')
-            ->addArgument('projectName', InputArgument::REQUIRED, 'Project name and directory where the new project will be created.')
-            ->addOption('with', 'w', InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY)
-        ;
+            ->addArgument('projectName', InputArgument::OPTIONAL, 'Project name and directory where the new project will be created.')
+            ->addOption('with', 'w', InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY);
     }
 
     protected function initialize(InputInterface $input, OutputInterface $output)
@@ -79,7 +94,6 @@ class NewCommand extends Command
 
         $this->projectName = trim($input->getArgument('projectName'));
         $this->packages = $input->getOption('with');
-        $this->projectDir = self::ROOT_DIR.DIRECTORY_SEPARATOR.$this->projectName;
         //$this->setOption($this->option);
         //$this->setPackageOptions($this->packages);
     }
@@ -88,10 +102,13 @@ class NewCommand extends Command
     {
         try {
             $this
-                ->checkProjectName()
+                ->getProjectName()
+                ->getDirectoryName()
+                ->getOrganizationName()
+                ->getAppDescription()
                 ->checkPermissions()
-                ->initializeProject();
-                //->askWebSiteQuestions()
+                ->createProject();
+
                 //->cleanUp()
                 //->displayInitializationResult();
         } catch (AbortException $e) {
@@ -115,46 +132,103 @@ class NewCommand extends Command
     }
 
 
-    protected function checkProjectName()
+    protected function getProjectName()
     {
-        if ($this->fs->has(DIRECTORY_SEPARATOR.$this->projectName)) {
-            throw new \RuntimeException(sprintf(
-                "There is already a '%s' project created.\n".
-                'Change your project name to create a new project please.',
-                $this->projectName
-            ));
+        if ($this->projectName === '') {
+            $defaultProjectName = 'MyApp';
+            $question = 'Please enter the name of the project (default: '.$defaultProjectName.'): ';
+            $this->projectName = $this->askQuestion($question, $defaultProjectName);
         }
 
         return $this;
     }
 
+
+    protected function getDirectoryName()
+    {
+       $question = new Question (
+            'Please enter the name of the project directory (default: '.$this->projectName.'): ',
+            $this->projectName);
+
+        $helper = $this->getHelper('question');
+
+        $question->setValidator(function ($value) {
+
+            $errorMessage = "There is already a '%s' directory created. Please choose a different directory name.";
+
+            if ($this->fs->has(DIRECTORY_SEPARATOR.$value)) {
+                throw new \Exception(sprintf($errorMessage, $value
+                ));
+            }
+
+            return $value;
+        });
+
+        $question->setMaxAttempts(3);
+
+        $this->projectDirName = $helper->ask($this->input, $this->output, $question);
+
+        $this->projectDir = self::ROOT_DIR.DIRECTORY_SEPARATOR.$this->projectDirName;
+
+        return $this;
+    }
+
+    protected function getOrganizationName()
+    {
+
+        $question = new Question (
+            'Please enter your organization\'s name (default: my-org): ',
+            'my-org');
+
+        $helper = $this->getHelper('question');
+
+        $this->organizationName = $helper->ask($this->input, $this->output, $question);
+
+        return $this;
+    }
+
+
+    protected function getAppDescription()
+    {
+        $question = new Question (
+            'Please enter a description of your application (default: A blank description): ',
+            'A blank Description');
+
+        $helper = $this->getHelper('question');
+
+        $this->appDescription = $helper->ask($this->input, $this->output, $question);
+
+        return $this;
+    }
+
     /**
-     * Checks if the initializer has enough permissions to create the project.
+     * Checks if the CLI has enough permissions to create the project.
      */
     protected function checkPermissions()
     {
         $projectParentDirectory = dirname($this->projectDir);
 
         if (!is_writable($projectParentDirectory)) {
-            throw new IOException(sprintf('Initializer does not have enough permissions to write to the "%s" directory.', $projectParentDirectory));
+            throw new \Exception(sprintf('The CLI does not have enough permissions to write to the "%s" directory.', $this->projectDirName));
         }
 
         return $this;
     }
 
-    protected function cleanup()
+    protected function checkWith ()
     {
-
+        $this->output->writeln("\n This is with ". join(',',$this->packages)." packages.");
+        $this->output->writeln("\n Org Name: ".$this->organizationName);
     }
 
-    protected function initializeProject()
+
+    protected function createProject()
     {
-        $this->output->writeln("\n Preparing project...\n");
+        $this->output->writeln("\n<info>Preparing project...</info>\n");
 
-        //create project directory
-        mkdir("$this->projectDir", 0755);
-
-        $this->output->writeln("\n Project directory ". DIRECTORY_SEPARATOR.$this->projectName ." was created.\n");
+        $this
+            ->createProjectDir()
+            ->initGitRepo();
         //if with example
            //copy composer.json file with template for example
        // if (file_put_contents($this->installDir . "/composer.json", $skeleton)) {
@@ -164,6 +238,11 @@ class NewCommand extends Command
         // cp -n -R /opt/appserver/webapps/test/vendor/appserver-io-apps/example/src/* /opt/appserver/webapps/test
 
         //remove /appserver-io-apps directory
+    }
+
+    protected function cleanup()
+    {
+
     }
 
     protected function displayInitializationResult()
@@ -179,13 +258,24 @@ class NewCommand extends Command
         $install->run();
 
         if ($install->isSuccessful()) {
-            $output->writeln('<info>Packages succesfully installed</info>');
+            $this->output->writeln('<info>Packages successfully installed</info>');
 
             return true;
         }
 
         $this->failingProcess = $install;
         return false;
+    }
+
+    private function askQuestion ($question, $default = null, $attempts=0)
+    {
+        $question = new Question ($question, $default);
+
+        $question->setMaxAttempts($attempts);
+
+        $helper = $this->getHelper('question');
+
+        return $helper->ask($this->input, $this->output, $question);
     }
 
 }

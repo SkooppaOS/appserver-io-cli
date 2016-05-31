@@ -36,8 +36,7 @@
     }
   },
   "bin": [
-    "bin/appserver",
-    "bin/appserver.php"
+    "bin/appserver"
   ],
   "support" : {
     "email" : "t.wagner@techdivision.com",
@@ -46,6 +45,12 @@
   },
   "keywords" : [
     "appserver command line interface utility"
-  ]
+  ],
+  "scripts": {
+    "post-install-cmd" : [
+      "ln -s /opt/appserver/vendor/bin/appserver /bin/appserver"
+    ]
+  }
+
 }
 

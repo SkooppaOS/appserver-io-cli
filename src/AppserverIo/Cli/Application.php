@@ -16,6 +16,7 @@ class Application extends ConsoleApplication
 
     public function doRun(InputInterface $input, OutputInterface $output)
     {
+        ini_set('display_errors', '1');
         $this->setDefaultCommand("about");
         return parent::doRun($input, $output);
     }

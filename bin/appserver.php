@@ -1,4 +1,3 @@
-#!/usr/bin/env php
 <?php
 
 require('/opt/appserver/vendor/autoload.php');
