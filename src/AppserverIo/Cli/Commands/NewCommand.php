@@ -1,6 +1,25 @@
 <?php
 namespace AppserverIo\Cli\Commands;
 
+/**
+ * Appserver\CLI
+ *
+ * NOTICE OF LICENSE
+ *
+ * This source file is subject to the Open Software License (OSL 3.0)
+ * that is available through the world-wide-web at this URL:
+ * http://opensource.org/licenses/osl-3.0.php
+ *
+ * PHP version 5
+ *
+ * @author    Scott Molinari <scott.molinari@adduco.de>
+ * @copyright 2015 TechDivision GmbH <info@appserver.io>
+ * @license   http://opensource.org/licenses/osl-3.0.php Open Software License (OSL 3.0)
+ * @link      https://github.com/appserver-io/description
+ * @link      http://www.appserver.io
+ */
+
+use AppserverIo\Cli\ClassTraits\EmailTrait;
 use AppserverIo\Cli\ClassTraits\ProjectTrait;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -21,6 +40,7 @@ use Templates;
  * This command creates new projects.
  *
  * @author Scott Molinari <scott.molinari@adduco.de>
+ * Date: 25.05.2016
  */
 class NewCommand extends Command
 {
@@ -33,16 +53,6 @@ class NewCommand extends Command
      * @var Filesystem
      */
     protected $fs;
-
-    /**
-     * @var string
-     */
-    protected $projectDir = '';
-
-    /**
-     * @var string
-     */
-    protected $projectDirName = '';
 
     /**
      * @var InputInterface
@@ -80,8 +90,20 @@ class NewCommand extends Command
         $this
             ->setName('new')
             ->setDescription('Creates a new appserver project.')
-            ->addArgument('projectName', InputArgument::OPTIONAL, 'Project name and directory where the new project will be created.')
-            ->addOption('with', 'w', InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY);
+            ->addArgument('projectName', InputArgument::OPTIONAL, 'Project name of the new project.')
+            ->addOption('with', 'w', InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY)
+            ->setHelp(<<<EOT
+The <info>new</info> command creates a basic application for appserver in the "/opt/appserver/webapps" directory.
+
+You can add the name of your new project as an argument. Example: <info>appserver new blog</info>
+
+You can also add the "--with" or "-w" option, to also load specially built appserver extensions or applications. 
+
+Currently the only extensions supported are "example", which loads a full example application or "routlt", which loads the routlt extension.
+
+EOT
+            )
+        ;
     }
 
     protected function initialize(InputInterface $input, OutputInterface $output)
@@ -105,6 +127,7 @@ class NewCommand extends Command
                 ->getProjectName()
                 ->getDirectoryName()
                 ->getOrganizationName()
+                ->getDevelopersName()
                 ->getAppDescription()
                 ->checkPermissions()
                 ->createProject();
@@ -121,10 +144,6 @@ class NewCommand extends Command
 
             return 1;
         } catch (\Exception $e) {
-            // Guzzle can wrap the AbortException in a GuzzleException
-            if ($e->getPrevious() instanceof AbortException) {
-                goto aborted;
-            }
 
             $this->cleanUp();
             throw $e;
@@ -135,9 +154,13 @@ class NewCommand extends Command
     protected function getProjectName()
     {
         if ($this->projectName === '') {
-            $defaultProjectName = 'MyApp';
-            $question = 'Please enter the name of the project (default: '.$defaultProjectName.'): ';
-            $this->projectName = $this->askQuestion($question, $defaultProjectName);
+
+            $question = new Question (
+                'Please enter the name of the project (default: my-app): ', 'my-app');
+
+            $helper = $this->getHelper('question');
+
+            $this->projectName = $helper->ask($this->input, $this->output, $question);
         }
 
         return $this;
@@ -146,8 +169,10 @@ class NewCommand extends Command
 
     protected function getDirectoryName()
     {
-       $question = new Question (
-            'Please enter the name of the project directory (default: '.$this->projectName.'): ',
+        $defaultDirectoryName = strtolower($this->projectName);
+
+        $question = new Question (
+            'Please enter the name of the project directory (default: '.$defaultDirectoryName.'): ',
             $this->projectName);
 
         $helper = $this->getHelper('question');
@@ -172,6 +197,7 @@ class NewCommand extends Command
 
         return $this;
     }
+    
 
     protected function getOrganizationName()
     {
@@ -186,8 +212,40 @@ class NewCommand extends Command
 
         return $this;
     }
+    
+
+    protected function getDevelopersName()
+    {
+
+        $question = new Question (
+            'Please enter your name (example: John Dev <john.dev@my-org.tmp>): ');
+
+        $helper = $this->getHelper('question');
 
 
+        $question->setValidator(function ($value) {
+
+            if (preg_match('/^(?P<name>[- \.,\p{L}\p{N}\'’]+) <(?P<email>.+?)>$/u', $value, $match)) {
+                if ($this->isValidEmail($match['email'])) {
+                    return $value;
+                }
+            }
+
+            $errorMessage = 'Invalid developer name string. It must be in the format: '.
+                            'John Dev <john.dev@my-org.tmp>';
+
+            throw new \InvalidArgumentException($errorMessage);
+
+        });
+
+        $question->setMaxAttempts(5);
+
+        $this->developersName = $helper->ask($this->input, $this->output, $question);
+
+        return $this;
+    }
+
+    
     protected function getAppDescription()
     {
         $question = new Question (
@@ -201,34 +259,36 @@ class NewCommand extends Command
         return $this;
     }
 
-    /**
-     * Checks if the CLI has enough permissions to create the project.
-     */
-    protected function checkPermissions()
-    {
-        $projectParentDirectory = dirname($this->projectDir);
 
-        if (!is_writable($projectParentDirectory)) {
-            throw new \Exception(sprintf('The CLI does not have enough permissions to write to the "%s" directory.', $this->projectDirName));
-        }
+    protected function check()
+    {
+        $this->output->writeln("\n Skeleton Dir: ".$this->skeletonsDir);
 
         return $this;
     }
 
-    protected function checkWith ()
-    {
-        $this->output->writeln("\n This is with ". join(',',$this->packages)." packages.");
-        $this->output->writeln("\n Org Name: ".$this->organizationName);
-    }
-
-
+    
     protected function createProject()
     {
         $this->output->writeln("\n<info>Preparing project...</info>\n");
+        if($this->packages){
 
-        $this
-            ->createProjectDir()
-            ->initGitRepo();
+        } else {
+
+            $this
+                ->createProjectDir()
+                ->initGitRepo()
+                ->setComposerName()
+                ->setComposerNamespace()
+                ->getComposerJsonSkeleton()
+                ->modifyComposerJson()
+                ->saveComposerJson()
+                ->installDirectorySkeleton();
+
+        }
+
+            //->installStaticFiles()
+            //->installDynamicFiles();
         //if with example
            //copy composer.json file with template for example
        // if (file_put_contents($this->installDir . "/composer.json", $skeleton)) {
@@ -240,11 +300,13 @@ class NewCommand extends Command
         //remove /appserver-io-apps directory
     }
 
+    
     protected function cleanup()
     {
 
     }
 
+    
     protected function displayInitializationResult()
     {
         $this->output->writeln(" Command Name: ". $this->getName()."\n");
@@ -252,6 +314,7 @@ class NewCommand extends Command
         $this->output->writeln(" with option value(s): ". implode('|', $this->packages)."\n");
     }
 
+    
     protected function install()
     {
         $install = new Process(sprintf('cd %s && php composer.phar install',  $this->projectDir));
@@ -266,16 +329,21 @@ class NewCommand extends Command
         $this->failingProcess = $install;
         return false;
     }
+    
 
-    private function askQuestion ($question, $default = null, $attempts=0)
+    protected function isValidEmail($email)
     {
-        $question = new Question ($question, $default);
+        // assume it's valid if we can't validate it
+        if (!function_exists('filter_var')) {
+            return true;
+        }
 
-        $question->setMaxAttempts($attempts);
+        // php <5.3.3 has a very broken email validator, so bypass checks
+        if (PHP_VERSION_ID < 50303) {
+            return true;
+        }
 
-        $helper = $this->getHelper('question');
-
-        return $helper->ask($this->input, $this->output, $question);
+        return false !== filter_var($email, FILTER_VALIDATE_EMAIL);
     }
 
 }

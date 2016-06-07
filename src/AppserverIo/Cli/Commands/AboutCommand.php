@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Appserver\Initializer
+ * Appserver\CLI
  *
  * NOTICE OF LICENSE
  *

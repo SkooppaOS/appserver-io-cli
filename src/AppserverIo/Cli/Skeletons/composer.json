@@ -1,33 +1,21 @@
 {
-    "name": "test/test",
-    "description": "Add a description here!",
-    "type": "project",
-    "authors": [
-        {
-            "name": "your name",
-            "email": "your.name@your-website.com"
-        }
-    ],
-    "require": {
-        "appserver-io-apps/example" : "2.0.3"
+    "name" : "${composer.name}",
+    "description" : "${composer.description}",
+    "version" : "0.1.0",
+    "require" : {
     },
     "require-dev" : {
     },
-    "repositories": [
-    {
-        "type": "package",
-        "package": {
-            "name": "appserver-io-apps/example",
-            "version": "2.0.3",
-            "dist": {
-                "type": "zip",
-                "url": "https://github.com/appserver-io-apps/example/archive/2.0.3.zip"
-            },
-            "autoload": {
-                "classmap": ["."]
-            }
+    "autoload" : {
+        "psr-0" : {
+            "${composer.namespace}" : [
+                "common/classes",
+                "common/tests/",
+                "WEB-INF/classes",
+                "WEB-INF/tests/",
+                "META-INF/classes",
+                "META-INF/tests/"
+            ]
         }
-    }],
-    "minimum-stability": "dev"
-
+    }
 }
